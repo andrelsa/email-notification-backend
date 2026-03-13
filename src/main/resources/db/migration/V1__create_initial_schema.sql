@@ -3,6 +3,9 @@
 -- Tables: users, email_request, email_status, retry_control
 -- =============================================
 
+-- Required for gen_random_uuid()
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 -- ---------- USERS ----------
 CREATE TABLE users (
     id          BIGSERIAL       PRIMARY KEY,
