@@ -52,5 +52,10 @@ tasks.withType<KotlinCompile> {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+
+    // Integration tests connect to a local PostgreSQL (see application-test.yml).
+    // For CI/CD with Testcontainers, set DOCKER_HOST and DOCKER_API_VERSION accordingly:
+    //   DOCKER_HOST=unix:///var/run/docker.sock  (Linux) or the Docker Desktop socket (macOS)
+    //   DOCKER_API_VERSION=1.44                  (required for Docker Engine >= 26)
 }
 

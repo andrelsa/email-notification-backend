@@ -15,6 +15,7 @@ class UserTest {
         status = UserStatus.ACTIVE
     )
 
+
     // ── deactivate ────────────────────────────────────────────────────────────
 
     @Test
