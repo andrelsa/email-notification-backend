@@ -38,6 +38,7 @@ docker-compose.override.yml
 # --- Spring Boot ---
 application-local.yml
 application-local.properties
+!src/main/resources/application-local.yml
 
 # --- Misc ---
 *.swp

@@ -1,0 +1,15 @@
+spring:
+  jpa:
+    show-sql: true
+
+logging:
+  level:
+    com.emailnotification: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+management:
+  endpoint:
+    health:
+      show-details: always
+
