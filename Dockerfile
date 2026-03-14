@@ -7,7 +7,7 @@ COPY gradle/wrapper/ gradle/wrapper/
 COPY gradlew .
 COPY build.gradle.kts settings.gradle.kts ./
 
-RUN chmod +x gradlew && ./gradlew dependencies --no-daemon || true
+RUN chmod +x gradlew && ./gradlew dependencies --no-daemon
 
 COPY src/ src/
 
