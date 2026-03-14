@@ -9,11 +9,13 @@
 - [Visão Geral](#visão-geral)
 - [Stack Tecnológica](#stack-tecnológica)
 - [Fase 1 — Fundação (Bootstrap & Infraestrutura)](#fase-1--fundação-bootstrap--infraestrutura)
+- [Fase 2 — Domínio de Usuário + Eventos](#fase-2--domínio-de-usuário--eventos)
 - [Como Rodar o Projeto](#como-rodar-o-projeto)
 - [Estrutura do Projeto](#estrutura-do-projeto)
 - [Banco de Dados](#banco-de-dados)
 - [Configurações por Ambiente](#configurações-por-ambiente)
 - [Endpoints Disponíveis](#endpoints-disponíveis)
+- [Coleção Postman](#coleção-postman)
 - [Próximas Fases](#próximas-fases)
 - [Histórico de Merges](#histórico-de-merges)
 
@@ -222,6 +224,173 @@ Resposta validada:
 
 ---
 
+## Fase 2 — Domínio de Usuário + Eventos
+
+> **Branch**: `feature/phase-2-user-events`  
+> **Status**: ✅ Concluída e validada
+
+### O que foi feito
+
+A Fase 2 implementou o domínio de usuário completo — da camada de domínio até os endpoints REST — seguindo estritamente a Clean Architecture. Nenhuma dependência de infraestrutura existe nas camadas `domain` e `application`.
+
+### T2.1 — Entidade de domínio `User` e value objects
+
+Arquivos: `domain/model/User.kt`, `UserId.kt`, `UserStatus.kt`
+
+- **`UserId`**: inline value class wrapping `java.util.UUID` — segurança de tipo sem overhead de boxing
+- **`UserStatus`**: enum `ACTIVE | INACTIVE | DELETED`
+- **`User`**: data class pura (sem anotações Spring/JPA), com:
+  - `id: Long?` (nullable — null antes da persistência)
+  - `publicId: UserId` (UUID gerado na criação)
+  - `deactivate()` — valida que status é `ACTIVE`, lança `IllegalArgumentException` caso contrário
+  - `delete()` — valida que status não é `DELETED`, lança `IllegalArgumentException` caso contrário
+  - `isActive: Boolean` — computed property
+
+**Regra**: o domínio não conhece Spring, JPA nem qualquer framework.
+
+### T2.2 — Porta de saída `UserRepository`
+
+Arquivo: `domain/port/UserRepository.kt`
+
+Interface definida no domínio, implementada pela camada de infraestrutura:
+
+```kotlin
+interface UserRepository {
+    fun save(user: User): User
+    fun findByPublicId(publicId: UserId): User?
+    fun findAll(): List<User>           // exclui DELETED
+    fun existsByEmail(email: String): Boolean
+}
+```
+
+### T2.3 — Eventos de domínio e use cases
+
+**Eventos** (`domain/event/`):
+- `UserCreatedEvent(user: User)`
+- `UserDeactivatedEvent(user: User)`
+- `UserDeletedEvent(user: User)`
+
+**Exceções** (`domain/exception/`):
+- `UserNotFoundException(publicId: UserId)`
+- `EmailAlreadyExistsException(email: String)`
+
+**Use cases** (`application/usecase/`):
+
+| Use case | Responsabilidade | Transação |
+|----------|-----------------|-----------|
+| `CreateUserUseCase` | Valida e-mail único, salva, publica `UserCreatedEvent` | `@Transactional` |
+| `GetUserUseCase` | Busca por `publicId`, lança 404 se não encontrado | `@Transactional(readOnly=true)` |
+| `ListUsersUseCase` | Retorna todos não-deletados | `@Transactional(readOnly=true)` |
+| `DeactivateUserUseCase` | Busca, chama `user.deactivate()`, salva, publica evento | `@Transactional` |
+| `DeleteUserUseCase` | Busca, chama `user.delete()`, salva, publica evento | `@Transactional` |
+
+### T2.4 — Adaptador de persistência JPA
+
+Arquivos: `adapter/out/persistence/`
+
+- **`UserJpaEntity`**: `@Entity` mapeada para tabela `users`; `publicId` e `createdAt` marcados `updatable=false`
+- **`UserJpaRepository`**: Spring Data com `findByPublicId`, `findAllByStatusNot`, `existsByEmail`
+- **`UserMapper`**: converte `UserJpaEntity ↔ User` (domínio); modelos completamente desacoplados
+- **`UserPersistenceAdapter`**: implementa `UserRepository`; `findAll()` exclui `DELETED`
+
+### T2.5 — Adaptador web REST
+
+Arquivos: `adapter/in/web/`
+
+| Endpoint | Método | Descrição |
+|----------|--------|-----------|
+| `POST /users` | `createUser` | Cria usuário, retorna 201 |
+| `GET /users` | `listUsers` | Lista não-deletados, retorna 200 |
+| `GET /users/{publicId}` | `getUser` | Busca por UUID, retorna 200 ou 404 |
+| `PATCH /users/{publicId}/deactivate` | `deactivateUser` | ACTIVE→INACTIVE, retorna 200 |
+| `DELETE /users/{publicId}` | `deleteUser` | Soft-delete, retorna 200 |
+
+**DTOs**:
+- `CreateUserRequest`: `@NotBlank`, `@Email`, `@Size(max=255)` nos campos
+- `UserResponse`: expõe apenas `publicId` (UUID string) — `id` interno nunca é exposto
+- `ErrorResponse`: `status`, `error`, `message`, `timestamp`
+
+**`GlobalExceptionHandler`** (@RestControllerAdvice):
+
+| Exceção | HTTP |
+|---------|------|
+| `UserNotFoundException` | 404 Not Found |
+| `EmailAlreadyExistsException` | 409 Conflict |
+| `IllegalArgumentException` | 422 Unprocessable Entity |
+| `MethodArgumentNotValidException` | 400 Bad Request |
+
+### T2.6 — Configuração Spring (`AppConfig`)
+
+- Bean `ApplicationEventPublisher` injetado automaticamente pelo Spring
+- Nenhuma configuração adicional necessária para eventos síncronos
+
+### T2.7 — Testes unitários
+
+22 testes no total cobrindo:
+
+| Classe de teste | Casos |
+|-----------------|-------|
+| `UserTest` | 9 — máquina de estados `deactivate`/`delete`, `isActive`, guards |
+| `CreateUserUseCaseTest` | 2 — happy path + `EmailAlreadyExistsException` |
+| `GetUserUseCaseTest` | 2 — encontrado + `UserNotFoundException` |
+| `ListUsersUseCaseTest` | 2 — lista com dados + lista vazia |
+| `DeactivateUserUseCaseTest` | 3 — sucesso + não encontrado + violação de regra |
+| `DeleteUserUseCaseTest` | 4 — ACTIVE/INACTIVE deletados + não encontrado + já deletado |
+
+Tecnologias: **MockK** para mocks, **JUnit 5**, `@ExtendWith(MockKExtension::class)`.
+
+### T2.8 — Testes de integração
+
+15 testes no total cobrindo todos os endpoints:
+
+| Cenário | Endpoint | HTTP esperado |
+|---------|----------|---------------|
+| Criar usuário | `POST /users` | 201 |
+| Criar (body inválido — name blank) | `POST /users` | 400 |
+| Criar (e-mail inválido) | `POST /users` | 400 |
+| Criar (e-mail duplicado) | `POST /users` | 409 |
+| Listar usuários | `GET /users` | 200 |
+| Listar (lista vazia) | `GET /users` | 200 |
+| Listar (sem DELETED) | `GET /users` | 200 |
+| Buscar por ID | `GET /users/{id}` | 200 |
+| Buscar por ID (não encontrado) | `GET /users/{id}` | 404 |
+| Desativar | `PATCH /users/{id}/deactivate` | 200 |
+| Desativar (não encontrado) | `PATCH /users/{id}/deactivate` | 404 |
+| Desativar (já INACTIVE) | `PATCH /users/{id}/deactivate` | 422 |
+| Deletar | `DELETE /users/{id}` | 200 |
+| Deletar (não encontrado) | `DELETE /users/{id}` | 404 |
+| Deletar (já DELETED) | `DELETE /users/{id}` | 422 |
+
+**Configuração de testes**: banco PostgreSQL local dedicado (`email_notification_test`), criado manualmente via:
+```bash
+docker exec email-notification-db psql -U postgres -c "CREATE DATABASE email_notification_test;"
+```
+> **Nota sobre Testcontainers + macOS**: Docker Desktop (macOS) expõe API versão 1.44+, mas a biblioteca `docker-java 3.4.1` usada pelo Testcontainers negocia v1.32 e o contêiner rejeita a conexão. A URL Testcontainers está disponível como comentário no `application-test.yml` para uso em CI/CD com ambiente Docker padrão.
+
+### T2.9 — Documentação, Postman e README
+
+- Coleção Postman v2.1 criada em `docs/postman/` com todos os 5 endpoints + health check
+- Environment Postman configurado para `http://localhost:8081` (Docker)
+- Script de test automático para capturar `publicId` após `POST /users`
+- `DEVELOPMENT_LOG.md` atualizado com Fase 2 completa
+- `README.md` atualizado refletindo Fase 2
+
+### Validação da Fase 2
+
+| Critério | Resultado |
+|----------|-----------|
+| `./gradlew compileKotlin` | ✅ BUILD SUCCESSFUL |
+| `./gradlew test` (unit) | ✅ 22/22 testes passando |
+| `./gradlew test` (integration) | ✅ 15/15 testes passando |
+| `./gradlew clean build` | ✅ BUILD SUCCESSFUL (37 testes) |
+| `POST /users` cria usuário | ✅ 201 com `publicId` UUID |
+| `GET /users` lista não-deletados | ✅ 200 exclui DELETED |
+| `PATCH /users/{id}/deactivate` | ✅ ACTIVE→INACTIVE com 200 |
+| `DELETE /users/{id}` soft-delete | ✅ DELETED retornado com 200 |
+| Eventos de domínio publicados | ✅ `UserCreated`, `UserDeactivated`, `UserDeleted` |
+
+---
+
 ## Como Rodar o Projeto
 
 ### Pré-requisitos
@@ -368,31 +537,79 @@ docker compose up -d
 
 ## Endpoints Disponíveis
 
+### Infraestrutura
+
 | Método | Path | Descrição | Status |
 |--------|------|-----------|--------|
-| GET | `http://localhost:8081/actuator/health` | Health check (base sem detalhes; com profile `local` exibe detalhes) | ✅ Fase 1 |
-| GET | `http://localhost:8081/actuator/info` | Informações da aplicação (app Docker) | ✅ Fase 1 |
-| GET | `http://localhost:8080/actuator/health` | Health check da app local com detalhes | ✅ Fase 1 |
+| GET | `/actuator/health` | Health check (DB, disco, ping) | ✅ Fase 1 |
+| GET | `/actuator/info` | Informações da aplicação | ✅ Fase 1 |
 
-> Endpoints de CRUD de usuários serão adicionados na **Fase 2**.
+### Users
+
+| Método | Path | Descrição | HTTP | Status |
+|--------|------|-----------|------|--------|
+| POST | `/users` | Cria usuário (`ACTIVE`) | 201 | ✅ Fase 2 |
+| GET | `/users` | Lista usuários não-deletados | 200 | ✅ Fase 2 |
+| GET | `/users/{publicId}` | Busca usuário por UUID | 200 / 404 | ✅ Fase 2 |
+| PATCH | `/users/{publicId}/deactivate` | Desativa usuário (`ACTIVE→INACTIVE`) | 200 / 404 / 422 | ✅ Fase 2 |
+| DELETE | `/users/{publicId}` | Soft-delete do usuário | 200 / 404 / 422 | ✅ Fase 2 |
+
+**Base URL**:
+- Docker app: `http://localhost:8081`
+- App local (`bootRun`): `http://localhost:8080`
+
+---
+
+## Coleção Postman
+
+Arquivos em `docs/postman/`:
+
+| Arquivo | Descrição |
+|---------|-----------|
+| `email-notification-backend.postman_collection.json` | Coleção completa com todos os endpoints, exemplos de request/response e scripts de teste |
+| `email-notification-backend.postman_environment.json` | Environment `Email Notification Backend - Local` com `base_url=http://localhost:8081` |
+
+### Como importar
+
+1. Abra o Postman
+2. **Import** → selecione `email-notification-backend.postman_collection.json`
+3. **Import** → selecione `email-notification-backend.postman_environment.json`
+4. Selecione o environment **Email Notification Backend - Local**
+5. Execute `Create User` — o `publicId` é capturado automaticamente para os demais requests
+
+### Fluxo de teste sugerido
+
+```
+1. Infrastructure / Health Check        → GET  /actuator/health        (200 UP)
+2. Users / Create User                  → POST /users                   (201 + captura publicId)
+3. Users / List Users                   → GET  /users                   (200 com [1 usuário])
+4. Users / Get User by ID               → GET  /users/{{publicId}}      (200)
+5. Users / Deactivate User              → PATCH /users/{{publicId}}/deactivate (200 INACTIVE)
+6. Users / Deactivate User (novamente)  → PATCH /users/{{publicId}}/deactivate (422)
+7. Users / Delete User                  → DELETE /users/{{publicId}}    (200 DELETED)
+8. Users / Delete User (novamente)      → DELETE /users/{{publicId}}    (422)
+9. Users / List Users                   → GET  /users                   (200 lista vazia — DELETED excluído)
+```
 
 ---
 
 ## Próximas Fases
 
-### Fase 2 — Domínio de Usuário + Eventos (Próxima)
-- Entidade de domínio `User` e value objects
-- Use cases: `CreateUser`, `DeactivateUser`, `DeleteUser`, `GetUser`, `ListUsers`
-- Adaptadores JPA (persistence) e REST (controller)
-- Publicação de eventos de domínio via `ApplicationEventPublisher`
-- Testes unitários e de integração
-
-### Fase 3 — Domínio de E-mail + Retry
+### Fase 3 — Domínio de E-mail + Retry (Próxima)
 - Entidades: `EmailRequest`, `EmailStatus`, `RetryControl`
 - Portas: `EmailSender`, `TemplateRenderer`
-- Listener de eventos → `SendEmailUseCase`
-- Job de retry com `@Scheduled`
-- Stubs para envio de e-mail e templates
+- Listener de eventos (`UserCreated`, `UserDeactivated`, `UserDeleted`) → `SendEmailUseCase`
+- Persistência de `EmailRequest` com status (`PENDING`, `RETRYING`, `SENT`, `FAILED`)
+- Audit trail em `EmailStatus`
+- Job de retry com `@Scheduled` e `RetryControl`
+- Stubs para envio de e-mail e templates (sem HTML fixo)
+- Testes unitários e de integração
+
+### Fase 4 — Observabilidade & Produção
+- Métricas com Micrometer + Prometheus
+- Logs estruturados (JSON)
+- Tracing distribuído
+- Hardening de segurança
 
 ---
 
@@ -407,4 +624,12 @@ docker compose up -d
 | 2026-03-14 | `feature/phase-1-bootstrap` | Fase 1 (hardening) | Actuator seguro no base (`show-details: never`) com detalhes apenas em local/test |
 | 2026-03-14 | `feature/phase-1-bootstrap` | Fase 1 (robustez) | Docker build fail-fast em dependências Gradle + timeout do wrapper ampliado |
 | 2026-03-14 | `feature/phase-1-bootstrap` | Fase 1 (config) | `application-local.yml` versionado e `.gitignore` atualizado |
+| 2026-03-14 | `feature/phase-2-user-events` | Fase 2 (T2.1) | Entidade `User`, value objects `UserId`/`UserStatus` — domínio puro sem framework |
+| 2026-03-14 | `feature/phase-2-user-events` | Fase 2 (T2.2) | Porta de saída `UserRepository` |
+| 2026-03-14 | `feature/phase-2-user-events` | Fase 2 (T2.3) | Use cases, eventos de domínio e exceções |
+| 2026-03-14 | `feature/phase-2-user-events` | Fase 2 (T2.4) | Adaptador JPA: `UserJpaEntity`, `UserJpaRepository`, `UserMapper`, `UserPersistenceAdapter` |
+| 2026-03-14 | `feature/phase-2-user-events` | Fase 2 (T2.5) | Adaptador web: `UserController`, DTOs, `GlobalExceptionHandler` |
+| 2026-03-14 | `feature/phase-2-user-events` | Fase 2 (T2.7) | Testes unitários: 22 casos cobrindo domínio e use cases |
+| 2026-03-14 | `feature/phase-2-user-events` | Fase 2 (T2.8) | Testes de integração: 15 casos cobrindo todos os endpoints |
+| 2026-03-14 | `feature/phase-2-user-events` | Fase 2 (T2.9) | Coleção Postman, README e DEVELOPMENT_LOG atualizados |
 
