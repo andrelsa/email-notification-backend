@@ -109,7 +109,7 @@ email-notification-backend/
 |  |- application-local.yml
 |  `- db/migration/V1__create_initial_schema.sql
 |- docs/
-|  |- ARCHITETURE_CONTEXT.md
+|  |- ARCHITECTURE_CONTEXT.md
 |  |- DEVELOPMENT_LOG.md
 |  `- plan-emailNotificationBackend.prompt.md
 |- docker-compose.yml
@@ -119,7 +119,7 @@ email-notification-backend/
 
 ## Documentacao do projeto
 
-- Contexto arquitetural: `docs/ARCHITETURE_CONTEXT.md`
+- Contexto arquitetural: `docs/ARCHITECTURE_CONTEXT.md`
 - Plano tecnico: `docs/plan-emailNotificationBackend.prompt.md`
 - Diario de desenvolvimento (atualizado ao longo das entregas): `docs/DEVELOPMENT_LOG.md`
 
