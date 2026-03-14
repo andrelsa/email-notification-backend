@@ -110,6 +110,8 @@ Build otimizado em 2 estágios:
 
 Isso garante imagens menores e mais seguras em produção.
 
+**Ajuste aplicado após revisão:** etapa de dependências no Dockerfile agora roda em modo **fail-fast** (sem `|| true`) para não mascarar falhas de resolução.
+
 ### T1.5 — Configurações por ambiente
 
 Três arquivos de configuração:
@@ -135,6 +137,8 @@ Três arquivos de configuração:
 ### T1.6 — Migration Flyway V1
 
 Arquivo: `V1__create_initial_schema.sql`
+
+Inclui `CREATE EXTENSION IF NOT EXISTS pgcrypto;` para garantir suporte a `gen_random_uuid()` em ambientes novos (Docker/Testcontainers), evitando falha de startup no Flyway.
 
 Cria 4 tabelas conforme definido no `ARCHITETURE_CONTEXT.md`:
 
@@ -186,6 +190,14 @@ Dependência `spring-boot-starter-actuator` configurada com:
 - **Health details (base)**: `show-details: never`
 - **Health details (local/test)**: `show-details: always`
 
+### T1.8 — Ajustes de robustez e versionamento (pós-revisão)
+
+- `gradle/wrapper/gradle-wrapper.jar` versionado no repositório (wrapper completo)
+- `.gitignore` ajustado para manter o wrapper JAR versionado
+- `.gitignore` ajustado para permitir `src/main/resources/application-local.yml`
+- `application-local.yml` versionado para suportar `SPRING_PROFILES_ACTIVE=local` no Docker Compose
+- `gradle/wrapper/gradle-wrapper.properties` com `networkTimeout=60000` para reduzir falhas transitórias de download
+
 Resposta validada:
 ```json
 {
@@ -226,11 +238,11 @@ docker compose up -d
 # Status dos containers
 docker compose ps
 
-# Health check
-curl http://localhost:8080/actuator/health
-
 # App em Docker (porta publicada 8081)
 curl http://localhost:8081/actuator/health
+
+# App local (quando executada via bootRun)
+curl http://localhost:8080/actuator/health
 ```
 
 ### Derrubar
@@ -391,4 +403,8 @@ docker compose up -d
 | 2026-03-07 | `feature/phase-1-bootstrap` | Fase 1 | Bootstrap do projeto: Spring Boot, Gradle, Docker Compose, Flyway, Actuator, estrutura Clean Architecture |
 | 2026-03-13 | `feature/phase-1-bootstrap` | Fase 1 (ajuste) | Padronização local de credenciais de banco para `postgres/postgres` em `docker-compose.yml` e `application.yml` |
 | 2026-03-13 | `feature/phase-1-bootstrap` | Fase 1 (ajuste) | Alteração de porta da app Docker para `8081` para permitir execução simultânea com app local em `8080` |
+| 2026-03-14 | `feature/phase-1-bootstrap` | Fase 1 (hardening) | Migration V1 atualizada com `pgcrypto` para suportar `gen_random_uuid()` em ambiente novo |
+| 2026-03-14 | `feature/phase-1-bootstrap` | Fase 1 (hardening) | Actuator seguro no base (`show-details: never`) com detalhes apenas em local/test |
+| 2026-03-14 | `feature/phase-1-bootstrap` | Fase 1 (robustez) | Docker build fail-fast em dependências Gradle + timeout do wrapper ampliado |
+| 2026-03-14 | `feature/phase-1-bootstrap` | Fase 1 (config) | `application-local.yml` versionado e `.gitignore` atualizado |
 

@@ -2,7 +2,7 @@
 
 Backend em Kotlin + Spring Boot para gerenciar usuarios e disparar notificacoes de e-mail baseadas em eventos de dominio.
 
-> Estado atual: **Fase 1 concluida** (bootstrap, infra, banco, migrations e actuator).
+> Estado atual: **Fase 1 concluida** (bootstrap, infra, banco, migrations, actuator e hardening tecnico).
 
 ## Objetivo
 
@@ -75,6 +75,18 @@ Arquivo base: `src/main/resources/application.yml`
 - JPA com `ddl-auto: validate`
 - Flyway habilitado
 - Actuator expondo `health` e `info`
+- `health.show-details`:
+  - base (`application.yml`): `never`
+  - local (`application-local.yml`): `always`
+  - test (`application-test.yml`): `always`
+
+## Ajustes finais da Fase 1
+
+- Migration V1 habilita `pgcrypto` para suportar `gen_random_uuid()` em bancos novos
+- `application-local.yml` esta versionado no repositorio (usado no profile `local`)
+- Gradle Wrapper completo versionado (`gradle/wrapper/gradle-wrapper.jar`)
+- Build Docker em modo fail-fast para dependencias (sem `|| true`)
+- Timeout de rede do wrapper ajustado para `60000` em `gradle/wrapper/gradle-wrapper.properties`
 
 Variaveis principais:
 
@@ -113,6 +125,9 @@ email-notification-backend/
 |  `- plan-emailNotificationBackend.prompt.md
 |- docker-compose.yml
 |- Dockerfile
+|- gradle/wrapper/gradle-wrapper.properties
+|- gradle/wrapper/gradle-wrapper.jar
+|- .gitignore
 `- build.gradle.kts
 ```
 
