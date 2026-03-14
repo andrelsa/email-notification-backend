@@ -120,15 +120,17 @@ Três arquivos de configuração:
 - JPA com `ddl-auto: validate` (Flyway gerencia o schema, Hibernate apenas valida)
 - `open-in-view: false` (evita lazy loading acidental em controllers)
 - Flyway habilitado apontando para `classpath:db/migration`
-- Actuator expondo endpoints `health` e `info` com detalhes visíveis
+- Actuator expondo endpoints `health` e `info` com `show-details: never` (hardening padrão)
 
 **`application-local.yml`** (profile `local`):
 - `show-sql: true` para debug
 - Logging DEBUG para `com.emailnotification`, `org.hibernate.SQL` e bind parameters
+- `management.endpoint.health.show-details: always` para troubleshooting local
 
 **`application-test.yml`** (profile `test`):
 - Datasource apontando para Testcontainers (`jdbc:tc:postgresql:16-alpine:///`)
 - Flyway habilitado para validar migrations em testes
+- `management.endpoint.health.show-details: always` para facilitar diagnóstico em testes
 
 ### T1.6 — Migration Flyway V1
 
@@ -181,7 +183,8 @@ Todas as tabelas possuem **índices** nos campos mais consultados (public_id, st
 
 Dependência `spring-boot-starter-actuator` configurada com:
 - **Endpoints expostos**: `/actuator/health`, `/actuator/info`
-- **Health details**: `show-details: always` (mostra status do DB, disco, SSL)
+- **Health details (base)**: `show-details: never`
+- **Health details (local/test)**: `show-details: always`
 
 Resposta validada:
 ```json
@@ -335,6 +338,7 @@ email-notification-backend/
 | JPA ddl-auto | `validate` | (herda) | `validate` |
 | JPA show-sql | `false` | `true` | (herda) |
 | Flyway | enabled | (herda) | enabled |
+| Health details (`/actuator/health`) | `never` | `always` | `always` |
 | Log level app | INFO | DEBUG | (herda) |
 | Log Hibernate SQL | — | DEBUG + TRACE binds | — |
 
@@ -354,9 +358,9 @@ docker compose up -d
 
 | Método | Path | Descrição | Status |
 |--------|------|-----------|--------|
-| GET | `http://localhost:8081/actuator/health` | Health check com detalhes de DB (app Docker) | ✅ Fase 1 |
+| GET | `http://localhost:8081/actuator/health` | Health check (base sem detalhes; com profile `local` exibe detalhes) | ✅ Fase 1 |
 | GET | `http://localhost:8081/actuator/info` | Informações da aplicação (app Docker) | ✅ Fase 1 |
-| GET | `http://localhost:8080/actuator/health` | Health check (app local via `bootRun`) | ✅ Fase 1 |
+| GET | `http://localhost:8080/actuator/health` | Health check da app local com detalhes | ✅ Fase 1 |
 
 > Endpoints de CRUD de usuários serão adicionados na **Fase 2**.
 
