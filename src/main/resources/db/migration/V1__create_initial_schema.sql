@@ -17,8 +17,6 @@ CREATE TABLE users (
     updated_at  TIMESTAMP       NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_users_public_id ON users (public_id);
-CREATE INDEX idx_users_email     ON users (email);
 CREATE INDEX idx_users_status    ON users (status);
 
 -- ---------- EMAIL REQUEST ----------
@@ -35,7 +33,6 @@ CREATE TABLE email_request (
     updated_at      TIMESTAMP       NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_email_request_public_id  ON email_request (public_id);
 CREATE INDEX idx_email_request_user_id    ON email_request (user_id);
 CREATE INDEX idx_email_request_status     ON email_request (status);
 
@@ -65,6 +62,5 @@ CREATE TABLE retry_control (
     updated_at          TIMESTAMP       NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_retry_control_email_request_id ON retry_control (email_request_id);
 CREATE INDEX idx_retry_control_next_attempt     ON retry_control (next_attempt_at);
 
