@@ -7,7 +7,7 @@ build/
 *.iml
 *.ipr
 *.iws
-out/
+/out/
 
 # --- Kotlin / Java ---
 *.class
