@@ -106,7 +106,6 @@ email-notification-backend/
 |  `- config/
 |- src/main/resources/
 |  |- application.yml
-|  |- application-local.yml
 |  `- db/migration/V1__create_initial_schema.sql
 |- docs/
 |  |- ARCHITECTURE_CONTEXT.md
