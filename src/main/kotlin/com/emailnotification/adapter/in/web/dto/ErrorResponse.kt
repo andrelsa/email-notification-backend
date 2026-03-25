@@ -1,4 +1,5 @@
 package com.emailnotification.adapter.`in`.web.dto
+
 import java.time.LocalDateTime
 /**
  * Standard error payload returned by [com.emailnotification.adapter.in.web.GlobalExceptionHandler].
