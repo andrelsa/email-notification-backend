@@ -2,18 +2,15 @@ package com.emailnotification.adapter.`in`.web
 
 import com.emailnotification.adapter.`in`.web.dto.CreateUserRequest
 import com.emailnotification.adapter.out.persistence.UserJpaRepository
-import com.emailnotification.domain.port.EmailRequestRepository
-import com.emailnotification.domain.port.RetryControlRepository
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.test.context.ActiveProfiles
-import org.springframework.test.context.bean.override.mockito.MockitoBean
-import org.springframework.test.web.servlet.MockMvc
 import org.springframework.http.MediaType
+import org.springframework.test.context.ActiveProfiles
+import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
@@ -31,19 +28,14 @@ import java.util.UUID
  * No running PostgreSQL instance is required — Docker must be available on the host.
  *
  * Each test starts with a clean `users` table (truncated in [cleanDatabase]).
- *
- * [EmailRequestRepository] and [RetryControlRepository] are mocked because their JPA
- * adapters are implemented in T3.6 (not yet available). Once T3.6 is complete these
- * mocks should be removed so the full email flow is exercised by [EmailFlowIntegrationTest].
+ * Email-related tables are also truncated to avoid FK constraint violations once the
+ * event listener (T3.7) starts persisting EmailRequest rows on user operations.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class UserControllerIntegrationTest {
 
-    // Mocked until T3.6 (JPA adapters) is implemented — prevents context load failure
-    @MockitoBean private lateinit var emailRequestRepository: EmailRequestRepository
-    @MockitoBean private lateinit var retryControlRepository: RetryControlRepository
 
     @Autowired private lateinit var mockMvc: MockMvc
     @Autowired private lateinit var objectMapper: ObjectMapper
