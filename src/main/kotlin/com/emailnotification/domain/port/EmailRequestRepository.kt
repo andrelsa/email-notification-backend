@@ -25,8 +25,8 @@ interface EmailRequestRepository {
     /**
      * Returns all requests that match the given [status].
      *
-     * Used by the retry scheduler to find PENDING requests that were never processed
-     * (e.g. listener failed before creating a RetryControl record).
+     * This is a generic status-based query method that can be used by
+     * application services and operational/reconciliation flows.
      */
     fun findAllByStatus(status: EmailStatus): List<EmailRequest>
 
