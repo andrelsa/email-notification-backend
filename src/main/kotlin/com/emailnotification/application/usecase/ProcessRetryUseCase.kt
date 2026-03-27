@@ -17,7 +17,7 @@ import java.time.LocalDateTime
 /**
  * Processes a single retry attempt for an [EmailRequest] that previously failed.
  *
- * Called by the retry scheduler ([com.emailnotification.adapter.in.scheduler.RetryScheduler])
+ * Called by the retry scheduler ([com.emailnotification.adapter.`in`.scheduler.RetryScheduler])
  * for each [RetryControl] record whose [RetryControl.nextAttemptAt] has elapsed.
  *
  * ## Flow
