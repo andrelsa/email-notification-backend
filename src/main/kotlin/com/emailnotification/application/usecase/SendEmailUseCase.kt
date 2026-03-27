@@ -43,7 +43,8 @@ class SendEmailUseCase(
     private val templateRenderer: TemplateRenderer,
     private val emailRequestRepository: EmailRequestRepository,
     private val retryControlRepository: RetryControlRepository,
-    @Value("\${app.email.retry.interval-minutes:5}") private val retryIntervalMinutes: Long
+    @Value("\${app.email.retry.interval-minutes:5}") private val retryIntervalMinutes: Long,
+    @Value("\${app.email.retry.max-attempts:3}") private val retryMaxAttempts: Int
 ) {
 
     private val log = LoggerFactory.getLogger(SendEmailUseCase::class.java)
@@ -163,6 +164,7 @@ class SendEmailUseCase(
         retryControlRepository.save(
             RetryControl(
                 emailRequestId = requestId,
+                maxAttempts = retryMaxAttempts,
                 nextAttemptAt = nextAttemptAt
             )
         )

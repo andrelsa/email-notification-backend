@@ -22,6 +22,10 @@ import org.junit.jupiter.api.assertThrows
 
 class SendEmailUseCaseTest {
 
+    private companion object {
+        const val CONFIGURED_MAX_ATTEMPTS = 7
+    }
+
     private val emailSender: EmailSender = mockk()
     private val templateRenderer: TemplateRenderer = mockk()
     private val emailRequestRepository: EmailRequestRepository = mockk()
@@ -36,7 +40,8 @@ class SendEmailUseCaseTest {
             templateRenderer        = templateRenderer,
             emailRequestRepository  = emailRequestRepository,
             retryControlRepository  = retryControlRepository,
-            retryIntervalMinutes    = 5L
+            retryIntervalMinutes    = 5L,
+            retryMaxAttempts        = CONFIGURED_MAX_ATTEMPTS
         )
     }
 
@@ -85,7 +90,9 @@ class SendEmailUseCaseTest {
         // then
         assertEquals(EmailStatus.RETRYING, result.status)
         verify(exactly = 2) { emailRequestRepository.save(any()) }
-        verify(exactly = 1) { retryControlRepository.save(any()) }
+        verify(exactly = 1) {
+            retryControlRepository.save(match { it.maxAttempts == CONFIGURED_MAX_ATTEMPTS })
+        }
         verify(exactly = 2) { emailRequestRepository.saveStatusEntry(any()) }
     }
 
@@ -107,7 +114,9 @@ class SendEmailUseCaseTest {
 
         // then
         assertEquals(EmailStatus.RETRYING, result.status)
-        verify(exactly = 1) { retryControlRepository.save(any()) }
+        verify(exactly = 1) {
+            retryControlRepository.save(match { it.maxAttempts == CONFIGURED_MAX_ATTEMPTS })
+        }
     }
 
     // ── permanent failure ────────────────────────────────────────────────────
