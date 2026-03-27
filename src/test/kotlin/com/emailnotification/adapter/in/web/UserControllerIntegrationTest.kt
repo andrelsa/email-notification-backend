@@ -2,6 +2,7 @@ package com.emailnotification.adapter.`in`.web
 
 import com.emailnotification.adapter.`in`.web.dto.CreateUserRequest
 import com.emailnotification.adapter.out.persistence.UserJpaRepository
+import com.emailnotification.application.usecase.SendEmailUseCase
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -10,6 +11,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.http.MediaType
 import org.springframework.test.context.ActiveProfiles
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
@@ -28,11 +30,19 @@ import java.util.UUID
  * No running PostgreSQL instance is required — Docker must be available on the host.
  *
  * Each test starts with a clean `users` table (truncated in [cleanDatabase]).
+ *
+ * [SendEmailUseCase] is mocked to prevent the async [com.emailnotification.adapter.`in`.event.UserEventListener]
+ * from persisting email_request rows that would cause FK constraint violations when
+ * [cleanDatabase] deletes users between tests.
+ * The full email notification flow is covered by EmailFlowIntegrationTest (T3.10).
  */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class UserControllerIntegrationTest {
+
+    // Mocked to isolate user CRUD tests from async email side-effects (see KDoc above)
+    @MockitoBean private lateinit var sendEmailUseCase: SendEmailUseCase
 
     @Autowired private lateinit var mockMvc: MockMvc
     @Autowired private lateinit var objectMapper: ObjectMapper
@@ -219,4 +229,3 @@ class UserControllerIntegrationTest {
             .andExpect(jsonPath("$.error").value("Unprocessable Entity"))
     }
 }
-

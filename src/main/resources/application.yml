@@ -34,3 +34,23 @@ management:
     health:
       show-details: never
 
+app:
+  async:
+    event-executor:
+      # Bounded async executor used by UserEventListener (@Async)
+      core-pool-size: 2
+      max-pool-size: 8
+      queue-capacity: 200
+      thread-name-prefix: event-async-
+  email:
+    retry:
+      # Minutes to wait before each retry attempt (default: 5)
+      interval-minutes: 5
+      # Maximum number of retry attempts per EmailRequest (default: 3)
+      max-attempts: 3
+      # Set to false to disable the RetryScheduler bean entirely (emergency killswitch)
+      enabled: true
+      scheduler:
+        # Milliseconds between end of one scheduler run and start of the next (default: 60s)
+        fixed-delay-ms: 60000
+

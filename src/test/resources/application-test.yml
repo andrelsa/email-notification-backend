@@ -17,3 +17,16 @@ management:
   endpoint:
     health:
       show-details: always
+
+app:
+  async:
+    event-executor:
+      core-pool-size: 1
+      max-pool-size: 2
+      queue-capacity: 20
+      thread-name-prefix: test-event-async-
+  email:
+    retry:
+      # Disable the RetryScheduler bean during tests to avoid background job
+      # interference with Testcontainers DB state between test methods.
+      enabled: false

@@ -10,6 +10,7 @@
 - [Stack Tecnológica](#stack-tecnológica)
 - [Fase 1 — Fundação (Bootstrap & Infraestrutura)](#fase-1--fundação-bootstrap--infraestrutura)
 - [Fase 2 — Domínio de Usuário + Eventos](#fase-2--domínio-de-usuário--eventos)
+- [Fase 3 — Domínio de E-mail + Retry](#fase-3--domínio-de-e-mail--retry)
 - [Como Rodar o Projeto](#como-rodar-o-projeto)
 - [Estrutura do Projeto](#estrutura-do-projeto)
 - [Banco de Dados](#banco-de-dados)
@@ -361,11 +362,8 @@ Tecnologias: **MockK** para mocks, **JUnit 5**, `@ExtendWith(MockKExtension::cla
 | Deletar (não encontrado) | `DELETE /users/{id}` | 404 |
 | Deletar (já DELETED) | `DELETE /users/{id}` | 422 |
 
-**Configuração de testes**: banco PostgreSQL local dedicado (`email_notification_test`), criado manualmente via:
-```bash
-docker exec email-notification-db psql -U postgres -c "CREATE DATABASE email_notification_test;"
-```
-> **Nota sobre Testcontainers + macOS**: Docker Desktop (macOS) expõe API versão 1.44+, mas a biblioteca `docker-java 3.4.1` usada pelo Testcontainers negocia v1.32 e o contêiner rejeita a conexão. A URL Testcontainers está disponível como comentário no `application-test.yml` para uso em CI/CD com ambiente Docker padrão.
+**Configuração de testes**: Testcontainers (`jdbc:tc:postgresql:16-alpine:///email_notification_test`), sem necessidade de banco local dedicado.
+> **Nota sobre Docker Engine + macOS**: o build configura `jvmArgs("-Dapi.version=1.44")` para compatibilidade com Docker Engine 27+ (API mínima 1.44) usando testcontainers-1.20.5.
 
 ### T2.9 — Documentação, Postman e README
 
@@ -388,6 +386,47 @@ docker exec email-notification-db psql -U postgres -c "CREATE DATABASE email_not
 | `PATCH /users/{id}/deactivate` | ✅ ACTIVE→INACTIVE com 200 |
 | `DELETE /users/{id}` soft-delete | ✅ DELETED retornado com 200 |
 | Eventos de domínio publicados | ✅ `UserCreated`, `UserDeactivated`, `UserDeleted` |
+
+---
+
+## Fase 3 — Domínio de E-mail + Retry
+
+> **Branch**: `feature/phase-3-email-domain`  
+> **Status**: ✅ Concluída e validada
+
+### O que foi feito
+
+A Fase 3 implementou o fluxo completo de notificações de e-mail, incluindo:
+- persistência de `email_request`, `email_status` e `retry_control`
+- envio assíncrono por eventos de domínio (`@Async + AFTER_COMMIT`)
+- scheduler de retry com kill switch por configuração
+- testes unitários dos casos de uso de e-mail e teste E2E do fluxo completo
+
+### Entregas por etapa
+
+| Etapa | Entrega | Resultado |
+|------|---------|-----------|
+| T3.1 | Entidades de domínio (`EmailRequest`, `EmailStatus`, `RetryControl`, `EmailStatusEntry`, `EmailRequestId`, `EmailEventType`) | ✅ |
+| T3.2 | Portas (`EmailRequestRepository`, `RetryControlRepository`, `EmailSender`, `TemplateRenderer`) | ✅ |
+| T3.3 | Use cases `SendEmailUseCase` e `ProcessRetryUseCase` | ✅ |
+| T3.4 | `StubEmailSender` (perfil `!prod`) | ✅ |
+| T3.5 | `InMemoryTemplateRenderer` | ✅ |
+| T3.6 | Adaptadores JPA + mappers para domínio de e-mail | ✅ |
+| T3.7 | `UserEventListener` (`@TransactionalEventListener(AFTER_COMMIT)` + `@Async`) | ✅ |
+| T3.8 | `RetryScheduler` com `@Scheduled` e `app.email.retry.enabled` | ✅ |
+| T3.9 | Testes unitários de e-mail (`SendEmailUseCaseTest`, `ProcessRetryUseCaseTest`) | ✅ |
+| T3.10 | Teste E2E `EmailFlowIntegrationTest` | ✅ |
+
+### Validação da Fase 3
+
+| Critério | Resultado |
+|----------|-----------|
+| `./gradlew clean test` | ✅ BUILD SUCCESSFUL |
+| Testes unitários de e-mail | ✅ Implementados e passando |
+| Listener assíncrono pós-commit | ✅ Validado em integração |
+| Scheduler de retry | ✅ Implementado com kill switch |
+| Fluxo E2E user -> evento -> email_request | ✅ Validado por `EmailFlowIntegrationTest` |
+| Total de testes da suite | ✅ 51 testes, 0 falhas |
 
 ---
 
@@ -595,17 +634,7 @@ Arquivos em `docs/postman/`:
 
 ## Próximas Fases
 
-### Fase 3 — Domínio de E-mail + Retry (Próxima)
-- Entidades: `EmailRequest`, `EmailStatus`, `RetryControl`
-- Portas: `EmailSender`, `TemplateRenderer`
-- Listener de eventos (`UserCreated`, `UserDeactivated`, `UserDeleted`) → `SendEmailUseCase`
-- Persistência de `EmailRequest` com status (`PENDING`, `RETRYING`, `SENT`, `FAILED`)
-- Audit trail em `EmailStatus`
-- Job de retry com `@Scheduled` e `RetryControl`
-- Stubs para envio de e-mail e templates (sem HTML fixo)
-- Testes unitários e de integração
-
-### Fase 4 — Observabilidade & Produção
+### Fase 4 — Observabilidade & Produção (Próxima)
 - Métricas com Micrometer + Prometheus
 - Logs estruturados (JSON)
 - Tracing distribuído
@@ -632,4 +661,6 @@ Arquivos em `docs/postman/`:
 | 2026-03-14 | `feature/phase-2-user-events` | Fase 2 (T2.7) | Testes unitários: 22 casos cobrindo domínio e use cases |
 | 2026-03-14 | `feature/phase-2-user-events` | Fase 2 (T2.8) | Testes de integração: 15 casos cobrindo todos os endpoints |
 | 2026-03-14 | `feature/phase-2-user-events` | Fase 2 (T2.9) | Coleção Postman, README e DEVELOPMENT_LOG atualizados |
-
+| 2026-03-27 | `feature/phase-3-email-domain` | Fase 3 (T3.1–T3.8) | Domínio de e-mail, portas, use cases, adaptadores JPA, listener assíncrono e scheduler de retry |
+| 2026-03-27 | `feature/phase-3-email-domain` | Fase 3 (T3.9) | Testes unitários de `SendEmailUseCase` e `ProcessRetryUseCase` |
+| 2026-03-27 | `feature/phase-3-email-domain` | Fase 3 (T3.10) | Teste E2E `EmailFlowIntegrationTest` validando fluxo user -> evento -> persistência de e-mail |
