@@ -132,7 +132,7 @@ Três arquivos de configuração:
 - `management.endpoint.health.show-details: always` para troubleshooting local
 
 **`application-test.yml`** (profile `test`):
-- Datasource apontando para Testcontainers (`jdbc:tc:postgresql:16-alpine:///`)
+- Datasource apontando por padrão para um PostgreSQL local (com alternativa comentada usando Testcontainers via `jdbc:tc:postgresql:16-alpine:///`)
 - Flyway habilitado para validar migrations em testes
 - `management.endpoint.health.show-details: always` para facilitar diagnóstico em testes
 
