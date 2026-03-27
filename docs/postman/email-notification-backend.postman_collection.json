@@ -1,0 +1,367 @@
+{
+  "info": {
+    "_postman_id": "email-notification-backend-v2",
+    "name": "Email Notification Backend",
+    "description": "Coleção de endpoints da API Email Notification Backend.\n\n## Como usar\n1. Importe este arquivo no Postman\n2. Importe o environment `email-notification-backend.postman_environment.json`\n3. Selecione o environment `Email Notification Backend - Local`\n4. Execute `POST Create User` primeiro — o `publicId` é capturado automaticamente na variável de coleção `publicId`\n\n## Base URL\n- Docker (padrão): `http://localhost:8081`\n- bootRun local: `http://localhost:8080`",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "publicId",
+      "value": "",
+      "type": "string",
+      "description": "UUID público do último usuário criado. Preenchido automaticamente pelo script de teste de POST /users."
+    }
+  ],
+  "item": [
+    {
+      "name": "Infrastructure",
+      "description": "Endpoints de infraestrutura (Actuator).",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/actuator/health",
+              "host": ["{{base_url}}"],
+              "path": ["actuator", "health"]
+            },
+            "description": "Verifica se a aplicação está saudável e conectada ao banco."
+          },
+          "response": [
+            {
+              "name": "200 UP",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"status\": \"UP\",\n  \"components\": {\n    \"db\": {\n      \"status\": \"UP\",\n      \"details\": {\n        \"database\": \"PostgreSQL\",\n        \"validationQuery\": \"isValid()\"\n      }\n    },\n    \"diskSpace\": { \"status\": \"UP\" },\n    \"ping\": { \"status\": \"UP\" }\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "description": "CRUD de usuários. Todos os endpoints usam `publicId` (UUID) como identificador público — o `id` interno (BIGINT) nunca é exposto.",
+      "item": [
+        {
+          "name": "Create User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('publicId', body.publicId);",
+                  "    console.log('publicId captured:', body.publicId);",
+                  "}",
+                  "",
+                  "pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
+                  "pm.test('Response has publicId', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.publicId).to.be.a('string');",
+                  "    pm.expect(body.publicId).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);",
+                  "});",
+                  "pm.test('Status is ACTIVE', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.equal('ACTIVE');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {
+              "raw": "{{base_url}}/users",
+              "host": ["{{base_url}}"],
+              "path": ["users"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Alice Silva\",\n  \"email\": \"alice@example.com\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "description": "Cria um novo usuário com status `ACTIVE`.\n\nApós criação bem-sucedida, o `publicId` retornado é salvo automaticamente na variável de coleção `{{publicId}}`.\n\n**Validações**:\n- `name`: obrigatório, máx 255 chars\n- `email`: obrigatório, formato válido, único, máx 255 chars"
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "status": "Created",
+              "code": 201,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"publicId\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"name\": \"Alice Silva\",\n  \"email\": \"alice@example.com\",\n  \"status\": \"ACTIVE\",\n  \"createdAt\": \"2026-03-14T10:00:00\",\n  \"updatedAt\": \"2026-03-14T10:00:00\"\n}"
+            },
+            {
+              "name": "400 Validation Error (blank name)",
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "_postman_previewlanguage": "json",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"\",\n  \"email\": \"alice@example.com\"\n}"
+                }
+              },
+              "body": "{\n  \"status\": 400,\n  \"error\": \"Bad Request\",\n  \"message\": \"name: Name is required\",\n  \"timestamp\": \"2026-03-14T10:00:00\"\n}"
+            },
+            {
+              "name": "400 Validation Error (invalid email)",
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "_postman_previewlanguage": "json",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Alice Silva\",\n  \"email\": \"not-an-email\"\n}"
+                }
+              },
+              "body": "{\n  \"status\": 400,\n  \"error\": \"Bad Request\",\n  \"message\": \"email: Invalid e-mail format\",\n  \"timestamp\": \"2026-03-14T10:00:00\"\n}"
+            },
+            {
+              "name": "409 Email Already Exists",
+              "status": "Conflict",
+              "code": 409,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "_postman_previewlanguage": "json",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Alice Silva\",\n  \"email\": \"alice@example.com\"\n}"
+                }
+              },
+              "body": "{\n  \"status\": 409,\n  \"error\": \"Conflict\",\n  \"message\": \"Email already registered: alice@example.com\",\n  \"timestamp\": \"2026-03-14T10:00:00\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "List Users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Response is array', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.be.an('array');",
+                  "});",
+                  "pm.test('No DELETED users in list', () => {",
+                  "    const body = pm.response.json();",
+                  "    body.forEach(user => {",
+                  "        pm.expect(user.status).to.not.equal('DELETED');",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/users",
+              "host": ["{{base_url}}"],
+              "path": ["users"]
+            },
+            "description": "Lista todos os usuários não deletados (`ACTIVE` e `INACTIVE`).\n\nUsuários com status `DELETED` (soft-delete) são excluídos da lista."
+          },
+          "response": [
+            {
+              "name": "200 OK – lista com usuários",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "_postman_previewlanguage": "json",
+              "body": "[\n  {\n    \"publicId\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n    \"name\": \"Alice Silva\",\n    \"email\": \"alice@example.com\",\n    \"status\": \"ACTIVE\",\n    \"createdAt\": \"2026-03-14T10:00:00\",\n    \"updatedAt\": \"2026-03-14T10:00:00\"\n  },\n  {\n    \"publicId\": \"b2c3d4e5-f6a7-8901-bcde-f12345678901\",\n    \"name\": \"Bob Santos\",\n    \"email\": \"bob@example.com\",\n    \"status\": \"INACTIVE\",\n    \"createdAt\": \"2026-03-14T09:00:00\",\n    \"updatedAt\": \"2026-03-14T11:00:00\"\n  }\n]"
+            },
+            {
+              "name": "200 OK – lista vazia",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "_postman_previewlanguage": "json",
+              "body": "[]"
+            }
+          ]
+        },
+        {
+          "name": "Get User by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('publicId matches requested', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.publicId).to.equal(pm.collectionVariables.get('publicId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/users/{{publicId}}",
+              "host": ["{{base_url}}"],
+              "path": ["users", "{{publicId}}"]
+            },
+            "description": "Retorna um usuário pelo `publicId` (UUID).\n\n**Variável `{{publicId}}`**: preenchida automaticamente após `Create User`, ou informe manualmente.\n\n**Erros**:\n- `404` se o usuário não existir"
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"publicId\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"name\": \"Alice Silva\",\n  \"email\": \"alice@example.com\",\n  \"status\": \"ACTIVE\",\n  \"createdAt\": \"2026-03-14T10:00:00\",\n  \"updatedAt\": \"2026-03-14T10:00:00\"\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "status": "Not Found",
+              "code": 404,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "_postman_previewlanguage": "json",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{base_url}}/users/00000000-0000-0000-0000-000000000000",
+                  "host": ["{{base_url}}"],
+                  "path": ["users", "00000000-0000-0000-0000-000000000000"]
+                }
+              },
+              "body": "{\n  \"status\": 404,\n  \"error\": \"Not Found\",\n  \"message\": \"User not found: 00000000-0000-0000-0000-000000000000\",\n  \"timestamp\": \"2026-03-14T10:00:00\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Deactivate User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Status is INACTIVE', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.equal('INACTIVE');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{base_url}}/users/{{publicId}}/deactivate",
+              "host": ["{{base_url}}"],
+              "path": ["users", "{{publicId}}", "deactivate"]
+            },
+            "description": "Transiciona o usuário de `ACTIVE` para `INACTIVE`.\n\nRetorna o estado final do usuário.\n\n**Erros**:\n- `404` se o usuário não existir\n- `422` se o usuário já estiver `INACTIVE` ou `DELETED`"
+          },
+          "response": [
+            {
+              "name": "200 OK – INACTIVE",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"publicId\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"name\": \"Alice Silva\",\n  \"email\": \"alice@example.com\",\n  \"status\": \"INACTIVE\",\n  \"createdAt\": \"2026-03-14T10:00:00\",\n  \"updatedAt\": \"2026-03-14T11:00:00\"\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "status": "Not Found",
+              "code": 404,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"status\": 404,\n  \"error\": \"Not Found\",\n  \"message\": \"User not found: 00000000-0000-0000-0000-000000000000\",\n  \"timestamp\": \"2026-03-14T10:00:00\"\n}"
+            },
+            {
+              "name": "422 Already INACTIVE",
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"status\": 422,\n  \"error\": \"Unprocessable Entity\",\n  \"message\": \"User is not active\",\n  \"timestamp\": \"2026-03-14T10:00:00\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Status is DELETED', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.equal('DELETED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/users/{{publicId}}",
+              "host": ["{{base_url}}"],
+              "path": ["users", "{{publicId}}"]
+            },
+            "description": "Soft-delete do usuário (`ACTIVE` ou `INACTIVE` → `DELETED`).\n\nRetorna o estado final com `status: DELETED`. O registro não é removido do banco.\n\n**Erros**:\n- `404` se o usuário não existir\n- `422` se o usuário já estiver `DELETED`"
+          },
+          "response": [
+            {
+              "name": "200 OK – DELETED",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"publicId\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"name\": \"Alice Silva\",\n  \"email\": \"alice@example.com\",\n  \"status\": \"DELETED\",\n  \"createdAt\": \"2026-03-14T10:00:00\",\n  \"updatedAt\": \"2026-03-14T12:00:00\"\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "status": "Not Found",
+              "code": 404,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"status\": 404,\n  \"error\": \"Not Found\",\n  \"message\": \"User not found: 00000000-0000-0000-0000-000000000000\",\n  \"timestamp\": \"2026-03-14T10:00:00\"\n}"
+            },
+            {
+              "name": "422 Already DELETED",
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"status\": 422,\n  \"error\": \"Unprocessable Entity\",\n  \"message\": \"User is already deleted\",\n  \"timestamp\": \"2026-03-14T10:00:00\"\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+

@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    # Testcontainers JDBC URL: a temporary PostgreSQL 16 container is started automatically
+    # for each test run and torn down afterwards. No local database setup is required.
+    # Works in any environment (dev, CI/CD) as long as Docker is available.
+    url: jdbc:tc:postgresql:16-alpine:///email_notification_test
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+  flyway:
+    enabled: true
+
+management:
+  endpoint:
+    health:
+      show-details: always

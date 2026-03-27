@@ -1,0 +1,47 @@
+# --- Gradle ---
+.gradle/
+build/
+
+# --- IntelliJ IDEA ---
+.idea/
+*.iml
+*.ipr
+*.iws
+/out/
+
+# --- Kotlin / Java ---
+*.class
+*.jar
+*.war
+*.ear
+
+# Keep Gradle wrapper binary versioned
+!gradle/wrapper/gradle-wrapper.jar
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Logs ---
+*.log
+logs/
+
+# --- Environment / Secrets ---
+.env
+.env.*
+!.env.example
+
+# --- Docker ---
+docker-compose.override.yml
+
+# --- Spring Boot ---
+application-local.yml
+application-local.properties
+!src/main/resources/application-local.yml
+
+# --- Misc ---
+*.swp
+*.swo
+*~
+
