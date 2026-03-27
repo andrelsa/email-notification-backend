@@ -1,4 +1,5 @@
 package com.emailnotification.adapter.`in`.web.dto
+
 import com.emailnotification.domain.model.User
 import java.time.LocalDateTime
 /**
