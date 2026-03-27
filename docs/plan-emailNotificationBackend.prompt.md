@@ -141,11 +141,11 @@ Listener de eventos, persistência de `EmailRequest`, máquina de status, job de
 | Camada | Tipo | Ferramenta | Escopo |
 |--------|------|------------|--------|
 | `domain` + `application` | **Unitário** | JUnit 5 + MockK | Use cases isolados com mocks das portas |
-| `adapter.in.web` | **Integração** | MockMvc ou WebTestClient + Testcontainers (PostgreSQL) | Controllers com banco real |
-| `adapter.out.persistence` | **Integração** | `@DataJpaTest` + Testcontainers | Repositórios JPA com banco real |
-| **Fluxo completo** | **E2E (in-process)** | `@SpringBootTest` + Testcontainers | User criado → evento → email_request persistido com status correto |
+| `adapter.in.web` | **Integração** | MockMvc ou WebTestClient + PostgreSQL local (`application-test.yml`) | Controllers com banco real usando o profile `test` |
+| `adapter.out.persistence` | **Integração** | `@DataJpaTest` + PostgreSQL local (`application-test.yml`) | Repositórios JPA com banco real usando o profile `test` |
+| **Fluxo completo** | **E2E (in-process)** | `@SpringBootTest` + PostgreSQL local (`application-test.yml`) | User criado → evento → `email_request` persistido com status correto |
 
-> **Convenção**: testes unitários no mesmo pacote da classe; testes de integração em pacote `integration`.
+> **Convenção**: testes unitários no mesmo pacote da classe; testes de integração junto aos adapters (ex.: `com.emailnotification.adapter.in.web`), usando o profile `test` com PostgreSQL configurado em `application-test.yml`.
 
 ---
 
@@ -185,5 +185,5 @@ Listener de eventos, persistência de `EmailRequest`, máquina de status, job de
 
 ## 12. Próximo Passo Recomendado
 
-> **Executar T1.1** — Inicializar o projeto Spring Boot com `build.gradle.kts` (Kotlin DSL), configurando as dependências base: Spring Web, Spring Data JPA, PostgreSQL driver, Flyway, Spring Boot Actuator, e dependências de teste (JUnit 5, MockK, Testcontainers). Isso desbloqueia todas as tarefas subsequentes.
+> **Executar T1.1** — Inicializar o projeto Spring Boot com `build.gradle.kts` (Kotlin DSL), configurando as dependências base: Spring Web, Spring Data JPA, PostgreSQL driver, Flyway, Spring Boot Actuator, e dependências de teste (JUnit 5, MockK). Isso desbloqueia todas as tarefas subsequentes.
 
