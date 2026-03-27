@@ -35,6 +35,13 @@ management:
       show-details: never
 
 app:
+  async:
+    event-executor:
+      # Bounded async executor used by UserEventListener (@Async)
+      core-pool-size: 2
+      max-pool-size: 8
+      queue-capacity: 200
+      thread-name-prefix: event-async-
   email:
     retry:
       # Minutes to wait before each retry attempt (default: 5)

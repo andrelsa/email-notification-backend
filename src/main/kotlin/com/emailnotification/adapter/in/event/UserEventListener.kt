@@ -1,6 +1,7 @@
 package com.emailnotification.adapter.`in`.event
 
 import com.emailnotification.application.usecase.SendEmailUseCase
+import com.emailnotification.config.AsyncConfig
 import com.emailnotification.domain.event.UserCreatedEvent
 import com.emailnotification.domain.event.UserDeactivatedEvent
 import com.emailnotification.domain.event.UserDeletedEvent
@@ -42,7 +43,7 @@ class UserEventListener(
     /**
      * Sends a welcome email after a new user is created and committed.
      */
-    @Async
+    @Async(AsyncConfig.EVENT_ASYNC_EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     fun onUserCreated(event: UserCreatedEvent) {
         log.debug("Received UserCreatedEvent for user={}", event.user.publicId)
@@ -59,7 +60,7 @@ class UserEventListener(
     /**
      * Sends a deactivation notification after a user is deactivated and committed.
      */
-    @Async
+    @Async(AsyncConfig.EVENT_ASYNC_EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     fun onUserDeactivated(event: UserDeactivatedEvent) {
         log.debug("Received UserDeactivatedEvent for user={}", event.user.publicId)
@@ -76,7 +77,7 @@ class UserEventListener(
     /**
      * Sends a deletion confirmation email after a user is soft-deleted and committed.
      */
-    @Async
+    @Async(AsyncConfig.EVENT_ASYNC_EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     fun onUserDeleted(event: UserDeletedEvent) {
         log.debug("Received UserDeletedEvent for user={}", event.user.publicId)
