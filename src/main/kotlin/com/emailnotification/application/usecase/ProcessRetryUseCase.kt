@@ -21,10 +21,12 @@ import java.time.LocalDateTime
  * for each [RetryControl] record whose [RetryControl.nextAttemptAt] has elapsed.
  *
  * ## Flow
- * 1. Load the [EmailRequest] linked to [retryControl].
- * 2. Guard: if the request is no longer [EmailStatus.RETRYING], skip silently
- *    (may have been resolved by a concurrent process).
- * 3. Attempt delivery via [EmailSender].
+ * 1. Atomically claim the [RetryControl] row via [RetryControlRepository.tryClaimForProcessing]
+ *    (sets `locked_until` using `FOR UPDATE SKIP LOCKED`). Skip if another instance already
+ *    holds the lock — this is the primary guard against duplicate email sends.
+ * 2. Load the [EmailRequest] linked to the given [RetryControl].
+ * 3. Guard: if the request is no longer [EmailStatus.RETRYING], skip silently.
+ * 4. Attempt delivery via [EmailSender].
  *    - Success → [EmailStatus.SENT], audit entry.
  *    - Permanent failure → [EmailStatus.FAILED], audit entry, update [RetryControl].
  *    - Transient failure + attempts not exhausted
@@ -48,11 +50,28 @@ class ProcessRetryUseCase(
     /**
      * Executes one retry attempt for the email request associated with [retryControl].
      *
+     * The first action is an **atomic claim** via [RetryControlRepository.tryClaimForProcessing].
+     * This sets `locked_until` in a dedicated `REQUIRES_NEW` transaction that commits
+     * immediately, so other scheduler instances that race for the same row will see the
+     * committed lock and skip without blocking.  The lock TTL equals [retryIntervalMinutes]
+     * so a crashed instance never permanently strands a record.
+     *
      * @param retryControl the retry record that is ready for a new attempt
      *                     (i.e. [RetryControl.isReadyToRetry] returned true when selected
      *                     by [RetryControlRepository.findAllReadyForRetry]).
      */
     fun execute(retryControl: RetryControl) {
+        // ── 1. Atomic claim — prevents duplicate processing across instances ──────
+        val lockExpiry = LocalDateTime.now().plusMinutes(retryIntervalMinutes)
+        if (!retryControlRepository.tryClaimForProcessing(retryControl.id!!, lockExpiry)) {
+            log.info(
+                "RetryControl {} already claimed by another instance, skipping",
+                retryControl.id
+            )
+            return
+        }
+
+        // ── 2. Load the linked EmailRequest ──────────────────────────────────────
         val emailRequest = emailRequestRepository.findById(retryControl.emailRequestId)
         if (emailRequest == null) {
             log.warn(

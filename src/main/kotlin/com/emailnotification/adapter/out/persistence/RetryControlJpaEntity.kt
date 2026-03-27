@@ -41,6 +41,13 @@ class RetryControlJpaEntity(
     @Column(name = "last_error_message")
     val lastErrorMessage: String?,
 
+    /**
+     * When non-null and in the future, a scheduler instance has claimed this row.
+     * Set atomically by [RetryControlJpaRepository.tryClaimForProcessing].
+     */
+    @Column(name = "locked_until")
+    val lockedUntil: LocalDateTime?,
+
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: LocalDateTime,
 

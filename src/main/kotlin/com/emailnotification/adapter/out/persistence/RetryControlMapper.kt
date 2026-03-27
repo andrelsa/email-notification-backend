@@ -18,6 +18,7 @@ class RetryControlMapper {
         lastAttemptAt    = entity.lastAttemptAt,
         nextAttemptAt    = entity.nextAttemptAt,
         lastErrorMessage = entity.lastErrorMessage,
+        lockedUntil      = entity.lockedUntil,
         createdAt        = entity.createdAt,
         updatedAt        = entity.updatedAt
     )
@@ -33,6 +34,7 @@ class RetryControlMapper {
         lastAttemptAt    = domain.lastAttemptAt,
         nextAttemptAt    = domain.nextAttemptAt,
         lastErrorMessage = domain.lastErrorMessage,
+        lockedUntil      = domain.lockedUntil,
         createdAt        = domain.createdAt,
         updatedAt        = domain.updatedAt
     )

@@ -22,6 +22,13 @@ data class RetryControl(
     val lastAttemptAt: LocalDateTime? = null,
     val nextAttemptAt: LocalDateTime? = null,
     val lastErrorMessage: String? = null,
+    /**
+     * When non-null and in the future, this record is claimed by a scheduler instance
+     * and must not be processed by any other instance.
+     * Set atomically via [RetryControlRepository.tryClaimForProcessing]; expires naturally
+     * so a crashed instance never permanently strands the row.
+     */
+    val lockedUntil: LocalDateTime? = null,
     val createdAt: LocalDateTime = LocalDateTime.now(),
     val updatedAt: LocalDateTime = LocalDateTime.now()
 ) {

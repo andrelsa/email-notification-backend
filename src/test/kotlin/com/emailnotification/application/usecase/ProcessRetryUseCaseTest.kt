@@ -44,6 +44,7 @@ class ProcessRetryUseCaseTest {
         val retrying     = aSavedRequest(status = EmailStatus.RETRYING)
         val sent         = aSavedRequest(status = EmailStatus.SENT)
 
+        every { retryControlRepository.tryClaimForProcessing(retryControl.id!!, any()) } returns true
         every { emailRequestRepository.findById(retryControl.emailRequestId) } returns retrying
         justRun { emailSender.send(any()) }
         every { emailRequestRepository.save(match { it.status == EmailStatus.SENT }) } returns sent
@@ -60,12 +61,31 @@ class ProcessRetryUseCaseTest {
         verify(exactly = 0) { retryControlRepository.save(any()) }
     }
 
+    // ── guard: already claimed by another instance ────────────────────────────
+
+    @Test
+    fun `should skip silently when retry is already claimed by another instance`() {
+        // given — another instance holds the lock
+        val retryControl = aRetryControl()
+        every { retryControlRepository.tryClaimForProcessing(retryControl.id!!, any()) } returns false
+
+        // when
+        useCase.execute(retryControl)
+
+        // then — no DB reads or writes, no email send
+        verify(exactly = 0) { emailRequestRepository.findById(any()) }
+        verify(exactly = 0) { emailSender.send(any()) }
+        verify(exactly = 0) { emailRequestRepository.save(any()) }
+        verify(exactly = 0) { emailRequestRepository.saveStatusEntry(any()) }
+    }
+
     // ── guard: email request not found ───────────────────────────────────────
 
     @Test
     fun `should skip silently when EmailRequest is not found`() {
         // given
         val retryControl = aRetryControl()
+        every { retryControlRepository.tryClaimForProcessing(retryControl.id!!, any()) } returns true
         every { emailRequestRepository.findById(retryControl.emailRequestId) } returns null
 
         // when
@@ -84,6 +104,7 @@ class ProcessRetryUseCaseTest {
         // given — already SENT by a concurrent process
         val retryControl = aRetryControl()
         val alreadySent  = aSavedRequest(status = EmailStatus.SENT)
+        every { retryControlRepository.tryClaimForProcessing(retryControl.id!!, any()) } returns true
         every { emailRequestRepository.findById(retryControl.emailRequestId) } returns alreadySent
 
         // when
@@ -103,6 +124,7 @@ class ProcessRetryUseCaseTest {
         val retrying     = aSavedRequest(status = EmailStatus.RETRYING)
         val failed       = aSavedRequest(status = EmailStatus.FAILED)
 
+        every { retryControlRepository.tryClaimForProcessing(retryControl.id!!, any()) } returns true
         every { emailRequestRepository.findById(retryControl.emailRequestId) } returns retrying
         every { emailSender.send(any()) } throws EmailDeliveryException("invalid address", isPermanent = true)
         every { emailRequestRepository.save(match { it.status == EmailStatus.FAILED }) } returns failed
@@ -129,6 +151,7 @@ class ProcessRetryUseCaseTest {
         val retrying     = aSavedRequest(status = EmailStatus.RETRYING)
         val failed       = aSavedRequest(status = EmailStatus.FAILED)
 
+        every { retryControlRepository.tryClaimForProcessing(retryControl.id!!, any()) } returns true
         every { emailRequestRepository.findById(retryControl.emailRequestId) } returns retrying
         every { emailSender.send(any()) } throws RuntimeException("smtp timeout")
         every { emailRequestRepository.save(match { it.status == EmailStatus.FAILED }) } returns failed
@@ -151,6 +174,7 @@ class ProcessRetryUseCaseTest {
         val retryControl = aRetryControl(attemptCount = 0, maxAttempts = 3)
         val retrying     = aSavedRequest(status = EmailStatus.RETRYING)
 
+        every { retryControlRepository.tryClaimForProcessing(retryControl.id!!, any()) } returns true
         every { emailRequestRepository.findById(retryControl.emailRequestId) } returns retrying
         every { emailSender.send(any()) } throws RuntimeException("connection refused")
         every { emailRequestRepository.saveStatusEntry(any()) } answers { firstArg() }
