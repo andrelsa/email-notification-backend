@@ -3,6 +3,7 @@ package com.emailnotification.adapter.`in`.web
 import com.emailnotification.adapter.`in`.web.dto.ErrorResponse
 import com.emailnotification.domain.exception.EmailAlreadyExistsException
 import com.emailnotification.domain.exception.UserNotFoundException
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.HttpStatus
 import org.springframework.validation.FieldError
 import org.springframework.web.bind.MethodArgumentNotValidException
@@ -33,6 +34,20 @@ class GlobalExceptionHandler {
     @ExceptionHandler(EmailAlreadyExistsException::class)
     @ResponseStatus(HttpStatus.CONFLICT)
     fun handleEmailAlreadyExists(ex: EmailAlreadyExistsException): ErrorResponse =
+        ErrorResponse(
+            status = HttpStatus.CONFLICT.value(),
+            error = "Conflict",
+            message = ex.message
+        )
+
+    /**
+     * 409 — database-level integrity conflict (e.g. unique constraint on users.email)
+     * that can occur under concurrent requests even if the application performs a
+     * prior exists-by-email check.
+     */
+    @ExceptionHandler(DataIntegrityViolationException::class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    fun handleDataIntegrityViolation(ex: DataIntegrityViolationException): ErrorResponse =
         ErrorResponse(
             status = HttpStatus.CONFLICT.value(),
             error = "Conflict",
