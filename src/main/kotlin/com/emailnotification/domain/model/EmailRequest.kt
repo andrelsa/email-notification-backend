@@ -1,5 +1,6 @@
 package com.emailnotification.domain.model
 
+import com.emailnotification.domain.exception.InvalidEmailStatusTransitionException
 import java.time.LocalDateTime
 
 /**
@@ -32,11 +33,11 @@ data class EmailRequest(
      * Transitions this request to [EmailStatus.SENT].
      * Only allowed from [EmailStatus.PENDING] or [EmailStatus.RETRYING].
      *
-     * @throws IllegalStateException if the current status does not allow this transition.
+     * @throws InvalidEmailStatusTransitionException if the current status does not allow this transition.
      */
     fun markAsSent(): EmailRequest {
-        check(status.canTransitionTo(EmailStatus.SENT)) {
-            "Cannot transition EmailRequest from $status to SENT"
+        if (!status.canTransitionTo(EmailStatus.SENT)) {
+            throw InvalidEmailStatusTransitionException(status, EmailStatus.SENT)
         }
         return copy(status = EmailStatus.SENT, updatedAt = LocalDateTime.now())
     }
@@ -45,11 +46,11 @@ data class EmailRequest(
      * Transitions this request to [EmailStatus.RETRYING].
      * Only allowed from [EmailStatus.PENDING] or [EmailStatus.RETRYING].
      *
-     * @throws IllegalStateException if the current status does not allow this transition.
+     * @throws InvalidEmailStatusTransitionException if the current status does not allow this transition.
      */
     fun markAsRetrying(): EmailRequest {
-        check(status.canTransitionTo(EmailStatus.RETRYING)) {
-            "Cannot transition EmailRequest from $status to RETRYING"
+        if (!status.canTransitionTo(EmailStatus.RETRYING)) {
+            throw InvalidEmailStatusTransitionException(status, EmailStatus.RETRYING)
         }
         return copy(status = EmailStatus.RETRYING, updatedAt = LocalDateTime.now())
     }
@@ -58,11 +59,11 @@ data class EmailRequest(
      * Transitions this request to [EmailStatus.FAILED].
      * Only allowed from [EmailStatus.PENDING] or [EmailStatus.RETRYING].
      *
-     * @throws IllegalStateException if the current status does not allow this transition.
+     * @throws InvalidEmailStatusTransitionException if the current status does not allow this transition.
      */
     fun markAsFailed(): EmailRequest {
-        check(status.canTransitionTo(EmailStatus.FAILED)) {
-            "Cannot transition EmailRequest from $status to FAILED"
+        if (!status.canTransitionTo(EmailStatus.FAILED)) {
+            throw InvalidEmailStatusTransitionException(status, EmailStatus.FAILED)
         }
         return copy(status = EmailStatus.FAILED, updatedAt = LocalDateTime.now())
     }
