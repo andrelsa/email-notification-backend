@@ -17,3 +17,10 @@ management:
   endpoint:
     health:
       show-details: always
+
+app:
+  email:
+    retry:
+      # Disable the RetryScheduler bean during tests to avoid background job
+      # interference with Testcontainers DB state between test methods.
+      enabled: false

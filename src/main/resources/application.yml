@@ -41,4 +41,9 @@ app:
       interval-minutes: 5
       # Maximum number of retry attempts per EmailRequest (default: 3)
       max-attempts: 3
+      # Set to false to disable the RetryScheduler bean entirely (emergency killswitch)
+      enabled: true
+      scheduler:
+        # Milliseconds between end of one scheduler run and start of the next (default: 60s)
+        fixed-delay-ms: 60000
 
