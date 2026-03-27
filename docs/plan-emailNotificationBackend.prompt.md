@@ -43,8 +43,8 @@ Scaffold do projeto Spring Boot, Docker Compose, Flyway, health check.
 ### Fase 2 — Domínio de Usuário + Eventos ✅ _concluída_
 CRUD de `User`, publicação de eventos de domínio, testes unitários e de integração (Testcontainers), coleção Postman.
 
-### Fase 3 — Domínio de E-mail + Retry 🚧 _em andamento_
-Listener de eventos, persistência de `EmailRequest`, máquina de status, job de retry, stub de envio.
+### Fase 3 — Domínio de E-mail + Retry ✅ _concluída em 27/03/2026_
+Listener de eventos, persistência de `EmailRequest`, máquina de status, job de retry, stubs de envio/template, testes unitários e integração end-to-end.
 
 ---
 
@@ -72,18 +72,18 @@ Listener de eventos, persistência de `EmailRequest`, máquina de status, job de
 - [x] **T2.8** — Testes de integração do controller (15 casos, MockMvc + Testcontainers `jdbc:tc:postgresql:16-alpine`)
 - [x] **T2.9** — Coleção Postman (6 requests + test scripts), environment local e atualização de documentação (`DEVELOPMENT_LOG.md`, `README.md`)
 
-### Fase 3 — Domínio de E-mail + Retry
+### Fase 3 — Domínio de E-mail + Retry ✅ _concluída em 27/03/2026_
 
-- [ ] **T3.1** — Criar entidades de domínio: `EmailRequest`, `EmailStatus` (enum), `RetryControl`
-- [ ] **T3.2** — Criar portas: `EmailRequestRepository`, `RetryControlRepository`, `EmailSender` (interface), `TemplateRenderer` (interface)
-- [ ] **T3.3** — Criar use cases: `SendEmailUseCase`, `ProcessRetryUseCase`
-- [ ] **T3.4** — Criar adaptador out `StubEmailSender` (log) implementando `EmailSender`
-- [ ] **T3.5** — Criar adaptador out `InMemoryTemplateRenderer` (stub com strings internas) implementando `TemplateRenderer`
-- [ ] **T3.6** — Criar adaptador out `EmailRequestJpaRepository`, `RetryControlJpaRepository` + JPA entities + mappers
-- [ ] **T3.7** — Criar listener de eventos (`@TransactionalEventListener`) que chama `SendEmailUseCase`
-- [ ] **T3.8** — Criar `@Scheduled` job para retry de e-mails `PENDING`/`RETRYING`
-- [ ] **T3.9** — Testes unitários dos use cases de e-mail
-- [ ] **T3.10** — Testes de integração do fluxo completo (criar user → evento → email_request persistido)
+- [x] **T3.1** — Criar entidades de domínio: `EmailRequest`, `EmailStatus` (enum), `RetryControl`
+- [x] **T3.2** — Criar portas: `EmailRequestRepository`, `RetryControlRepository`, `EmailSender` (interface), `TemplateRenderer` (interface)
+- [x] **T3.3** — Criar use cases: `SendEmailUseCase`, `ProcessRetryUseCase`
+- [x] **T3.4** — Criar adaptador out `StubEmailSender` (log) implementando `EmailSender`
+- [x] **T3.5** — Criar adaptador out `InMemoryTemplateRenderer` (stub com strings internas) implementando `TemplateRenderer`
+- [x] **T3.6** — Criar adaptador out `EmailRequestJpaRepository`, `RetryControlJpaRepository` + JPA entities + mappers
+- [x] **T3.7** — Criar listener de eventos (`@TransactionalEventListener`) que chama `SendEmailUseCase`
+- [x] **T3.8** — Criar `@Scheduled` job para retry de e-mails `PENDING`/`RETRYING`
+- [x] **T3.9** — Testes unitários dos use cases de e-mail
+- [x] **T3.10** — Testes de integração do fluxo completo (criar user → evento → email_request persistido)
 
 ---
 
@@ -132,10 +132,11 @@ Listener de eventos, persistência de `EmailRequest`, máquina de status, job de
 | **T2.7** | 22 testes unitários passando; cobertura dos use cases ≥ 90% ✅ |
 | **T2.8** | 15 testes de integração passando com Testcontainers (`jdbc:tc:postgresql:16-alpine`); self-contained, sem PostgreSQL local ✅ |
 | **T2.9** | Coleção Postman importável com 6 requests; documentação atualizada ✅ |
-| **T3.1–T3.6** | `email_request` é persistido com status `PENDING` ao receber evento |
-| **T3.7** | Listener consome evento e invoca `SendEmailUseCase`; stub loga o envio; status muda para `SENT` |
-| **T3.8** | Job de retry reprocessa registros `RETRYING`; após max tentativas, status muda para `FAILED` |
-| **T3.9–T3.10** | Todos os testes passam; fluxo user → evento → email_request → status funciona end-to-end |
+| **T3.1–T3.6** | Persistência de `email_request`, `email_status` e `retry_control` implementada e validada em integração ✅ |
+| **T3.7** | Listener assíncrono (`@Async + AFTER_COMMIT`) consome eventos e invoca `SendEmailUseCase` ✅ |
+| **T3.8** | Retry scheduler implementado com `@Scheduled` + kill switch `app.email.retry.enabled` ✅ |
+| **T3.9** | Testes unitários de `SendEmailUseCase` e `ProcessRetryUseCase` implementados e passando ✅ |
+| **T3.10** | Teste E2E `EmailFlowIntegrationTest` validando fluxo user → evento → `email_request`/`email_status` ✅ |
 
 ---
 
@@ -190,7 +191,6 @@ Listener de eventos, persistência de `EmailRequest`, máquina de status, job de
 
 ## 12. Próximo Passo Recomendado
 
-> **Executar T3.1** — Criar as entidades de domínio da Fase 3: `EmailRequest`, `EmailStatus` (enum com máquina de estados `PENDING → SENT`, `PENDING → RETRYING → SENT`, `RETRYING → FAILED`) e `RetryControl`. Isso desbloqueia todas as tarefas T3.2 a T3.10.
+> **Executar Fase 4 (Observabilidade & Produção)** — incluir métricas (Micrometer/Prometheus), logs estruturados (JSON), tracing e hardening operacional.
 >
-> **Branch ativa:** `feature/phase-3-email-domain` (criada a partir de `feature/phase-2-user-events` em 27/03/2026).
-
+> **Branch ativa:** `feature/phase-3-email-domain` (fase 3 concluída; pronta para PR/merge).

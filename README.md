@@ -2,16 +2,17 @@
 
 Backend em Kotlin + Spring Boot para gerenciar usuarios e disparar notificacoes de e-mail baseadas em eventos de dominio.
 
-> Estado atual: **Fase 2 concluida** — CRUD de usuarios, Clean Architecture completa, eventos de dominio, 37 testes passando.
+> Estado atual: **Fase 3 concluida** — CRUD de usuarios + fluxo completo de e-mail/retry implementado, com **51 testes passando**.
 
 ## Objetivo
 
-- CRUD de usuarios (implementado na Fase 2)
+- CRUD de usuarios (Fase 2)
 - Disparo de e-mails em eventos de dominio:
   - `UserCreated`
   - `UserDeactivated`
   - `UserDeleted`
 - Persistencia de historico de envio, status e tentativas de retry
+- Retry assíncrono com scheduler para falhas transientes
 
 ## Stack
 
@@ -63,8 +64,7 @@ SPRING_PROFILES_ACTIVE=local ./gradlew bootRun
 ### 4) Executar testes
 
 ```bash
-# requer banco email_notification_test rodando localmente
-# crie se necessario: docker exec email-notification-db psql -U postgres -c "CREATE DATABASE email_notification_test;"
+# requer apenas Docker ativo (Testcontainers sobe PostgreSQL automaticamente)
 ./gradlew test
 ```
 
@@ -97,62 +97,20 @@ docker compose down
 
 > O `publicId` e um UUID exposto na API. O `id` interno (BIGINT) nunca e retornado.
 
-## Colecao Postman
+## Fluxo de e-mail (Fase 3)
 
-Arquivos em `docs/postman/`:
+- `UserEventListener` consome eventos `UserCreated`, `UserDeactivated`, `UserDeleted`
+- `SendEmailUseCase` persiste `email_request` (PENDING), tenta envio e transiciona para `SENT`, `RETRYING` ou `FAILED`
+- `RetryScheduler` reprocessa `RETRYING` via `ProcessRetryUseCase`
+- `email_status` guarda audit trail completo de transicoes
+- `StubEmailSender` e `InMemoryTemplateRenderer` permitem execucao local sem dependencias externas
 
-| Arquivo | Descricao |
-|---------|-----------|
-| `email-notification-backend.postman_collection.json` | Colecao completa com todos os endpoints, exemplos e scripts de teste automatico |
-| `email-notification-backend.postman_environment.json` | Environment `Email Notification Backend - Local` com `base_url=http://localhost:8081` |
+## Qualidade e testes
 
-**Como importar**: Postman → Import → selecione os dois arquivos → escolha o environment → execute `Create User` (o `publicId` e capturado automaticamente).
-
-## Banco de dados local
-
-- Host: `localhost` | Port: `5432`
-- Database: `email_notification` (app) / `email_notification_test` (testes)
-- Username / Password: `postgres` / `postgres`
-
-Se voce alterou credenciais recentemente, recrie o volume:
-
-```bash
-docker compose down -v && docker compose up -d
-```
-
-## Rodar app Docker + app local ao mesmo tempo
-
-- Docker publica a app em `8081` (`8081:8080`)
-- App local continua em `8080`
-- Banco permanece em `5432`
-
-## Estrutura do repositorio
-
-```text
-email-notification-backend/
-|- src/main/kotlin/com/emailnotification/
-|  |- Application.kt
-|  |- domain/{model,port,event,exception}/
-|  |- application/usecase/
-|  |- adapter/{in/web, out/persistence}/
-|  `- config/
-|- src/main/resources/
-|  |- application.yml
-|  |- application-local.yml
-|  `- db/migration/V1__create_initial_schema.sql
-|- src/test/kotlin/com/emailnotification/
-|  |- domain/model/UserTest.kt
-|  |- application/usecase/
-|  `- adapter/in/web/UserControllerIntegrationTest.kt
-|- docs/
-|  |- ARCHITETURE_CONTEXT.md
-|  |- DEVELOPMENT_LOG.md
-|  |- plan-emailNotificationBackend.prompt.md
-|  `- postman/
-|- docker-compose.yml
-|- Dockerfile
-`- build.gradle.kts
-```
+- **Total atual**: 51 testes (0 falhas)
+- Unitarios de usuario + e-mail (`domain`/`application`)
+- Integracao de API (`UserControllerIntegrationTest`)
+- Integracao E2E do fluxo de e-mail (`EmailFlowIntegrationTest`)
 
 ## Documentacao do projeto
 
@@ -162,4 +120,4 @@ email-notification-backend/
 
 ## Proximos passos
 
-- Fase 3: dominio de e-mail (`EmailRequest`, `EmailStatus`, `RetryControl`), listener de eventos, job de retry e stubs de envio/template.
+- Fase 4: observabilidade e producao (metricas, logs estruturados, tracing e hardening).
