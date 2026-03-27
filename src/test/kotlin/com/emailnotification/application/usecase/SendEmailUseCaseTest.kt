@@ -45,6 +45,20 @@ class SendEmailUseCaseTest {
         )
     }
 
+    @Test
+    fun `should reject non-positive retry max attempts configuration`() {
+        assertThrows<IllegalArgumentException> {
+            SendEmailUseCase(
+                emailSender            = emailSender,
+                templateRenderer       = templateRenderer,
+                emailRequestRepository = emailRequestRepository,
+                retryControlRepository = retryControlRepository,
+                retryIntervalMinutes   = 5L,
+                retryMaxAttempts       = 0
+            )
+        }
+    }
+
     // ── happy path ───────────────────────────────────────────────────────────
 
     @Test

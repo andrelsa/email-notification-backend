@@ -47,6 +47,12 @@ class SendEmailUseCase(
     @Value("\${app.email.retry.max-attempts:3}") private val retryMaxAttempts: Int
 ) {
 
+    init {
+        require(retryMaxAttempts > 0) {
+            "Property app.email.retry.max-attempts must be > 0, but was $retryMaxAttempts"
+        }
+    }
+
     private val log = LoggerFactory.getLogger(SendEmailUseCase::class.java)
 
     /**
