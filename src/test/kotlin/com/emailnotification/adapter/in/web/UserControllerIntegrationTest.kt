@@ -22,11 +22,12 @@ import java.util.UUID
 /**
  * Integration tests for [UserController].
  *
- * Uses a full Spring application context (MockMvc + mock servlet env) with a
- * real PostgreSQL database started automatically by Testcontainers via the
- * `jdbc:tc:` JDBC URL defined in [application-test.yml].
+ * Loads a full Spring application context with [MockMvc] against a real PostgreSQL
+ * database. The database is started automatically by Testcontainers using the
+ * `jdbc:tc:postgresql:16-alpine:///` JDBC URL configured in `application-test.yml`.
+ * No running PostgreSQL instance is required — Docker must be available on the host.
  *
- * Each test starts with a clean [users] table (deleted in [cleanDatabase]).
+ * Each test starts with a clean `users` table (truncated in [cleanDatabase]).
  */
 @SpringBootTest
 @AutoConfigureMockMvc

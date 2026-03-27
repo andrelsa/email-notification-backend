@@ -53,9 +53,17 @@ tasks.withType<KotlinCompile> {
 tasks.withType<Test> {
     useJUnitPlatform()
 
-    // Integration tests connect to a local PostgreSQL (see application-test.yml).
-    // For CI/CD with Testcontainers, set DOCKER_HOST and DOCKER_API_VERSION accordingly:
-    //   DOCKER_HOST=unix:///var/run/docker.sock  (Linux) or the Docker Desktop socket (macOS)
-    //   DOCKER_API_VERSION=1.44                  (required for Docker Engine >= 26)
+    // Integration tests use Testcontainers (jdbc:tc: URL in application-test.yml).
+    // Docker must be available on the host. On macOS/Windows ensure Docker Desktop is running.
+    //
+    // Root cause: testcontainers-1.20.5 shades docker-java and its DefaultDockerClientConfig
+    // reads the API version from the JVM system property "api.version" (not the env var
+    // DOCKER_API_VERSION). Docker Engine 27+ (API minimum 1.44) rejects requests with API
+    // version < 1.44 with HTTP 400. The jvmArg below forces the shaded docker-java to use
+    // /v1.44/... paths so all Testcontainers strategies succeed.
+    //
+    // DOCKER_HOST is kept as an env var because docker-java *does* read it from the environment.
+    jvmArgs("-Dapi.version=${System.getProperty("api.version") ?: "1.44"}")
+    environment("DOCKER_HOST", System.getenv("DOCKER_HOST") ?: "unix:///var/run/docker.sock")
 }
 

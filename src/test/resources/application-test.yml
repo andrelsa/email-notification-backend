@@ -1,16 +1,10 @@
 spring:
   datasource:
-    # Local development: connects to the Docker PostgreSQL already running via docker-compose.
-    # A dedicated test database (email_notification_test) is used to avoid polluting dev data.
-    # To create it: docker exec email-notification-db psql -U postgres -c "CREATE DATABASE email_notification_test;"
-    #
-    # CI/CD alternative (Testcontainers): replace with:
-    #   url: jdbc:tc:postgresql:16-alpine:///email_notification
-    #   driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
-    url: ${SPRING_DATASOURCE_TEST_URL:jdbc:postgresql://localhost:5432/email_notification_test}
-    username: ${SPRING_DATASOURCE_USERNAME:postgres}
-    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
-    driver-class-name: org.postgresql.Driver
+    # Testcontainers JDBC URL: a temporary PostgreSQL 16 container is started automatically
+    # for each test run and torn down afterwards. No local database setup is required.
+    # Works in any environment (dev, CI/CD) as long as Docker is available.
+    url: jdbc:tc:postgresql:16-alpine:///email_notification_test
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
 
   jpa:
     hibernate:
