@@ -37,13 +37,13 @@ Construir um backend em **Kotlin + Spring Boot + Gradle** que gerencia usuários
 
 ## 4. Plano em Fases
 
-### Fase 1 — Fundação (Bootstrap & Infraestrutura)
+### Fase 1 — Fundação (Bootstrap & Infraestrutura) ✅ _concluída_
 Scaffold do projeto Spring Boot, Docker Compose, Flyway, health check.
 
-### Fase 2 — Domínio de Usuário + Eventos
-CRUD de `User`, publicação de eventos de domínio, testes unitários do domínio.
+### Fase 2 — Domínio de Usuário + Eventos ✅ _concluída_
+CRUD de `User`, publicação de eventos de domínio, testes unitários e de integração (Testcontainers), coleção Postman.
 
-### Fase 3 — Domínio de E-mail + Retry
+### Fase 3 — Domínio de E-mail + Retry 🚧 _em andamento_
 Listener de eventos, persistência de `EmailRequest`, máquina de status, job de retry, stub de envio.
 
 ---
@@ -60,16 +60,17 @@ Listener de eventos, persistência de `EmailRequest`, máquina de status, job de
 - [x] **T1.6** — Criar migrations Flyway (V1 — tabelas `users`, `email_request`, `email_status`, `retry_control`)
 - [x] **T1.7** — Adicionar actuator + endpoint `/health`
 
-### Fase 2 — Domínio de Usuário
+### Fase 2 — Domínio de Usuário ✅ _concluída em 27/03/2026_
 
-- [ ] **T2.1** — Criar entidade de domínio `User` e value objects
-- [ ] **T2.2** — Criar porta `UserRepository` (interface no domínio)
-- [ ] **T2.3** — Criar use cases: `CreateUser`, `DeactivateUser`, `DeleteUser`, `GetUser`, `ListUsers`
-- [ ] **T2.4** — Criar adaptador out `UserJpaRepository` + JPA entity `UserJpaEntity` + mapper
-- [ ] **T2.5** — Criar adaptador in `UserController` (REST endpoints)
-- [ ] **T2.6** — Publicar eventos de domínio (`UserCreatedEvent`, `UserDeactivatedEvent`, `UserDeletedEvent`) no use case via `ApplicationEventPublisher`
-- [ ] **T2.7** — Testes unitários dos use cases (mocks)
-- [ ] **T2.8** — Testes de integração do controller (MockMvc / WebTestClient)
+- [x] **T2.1** — Criar entidade de domínio `User` e value objects (`UserId`, `UserStatus`)
+- [x] **T2.2** — Criar porta `UserRepository` (interface no domínio)
+- [x] **T2.3** — Criar use cases: `CreateUser`, `DeactivateUser`, `DeleteUser`, `GetUser`, `ListUsers`
+- [x] **T2.4** — Criar adaptador out `UserJpaRepository` + JPA entity `UserJpaEntity` + mapper
+- [x] **T2.5** — Criar adaptador in `UserController` (REST endpoints)
+- [x] **T2.6** — Publicar eventos de domínio (`UserCreatedEvent`, `UserDeactivatedEvent`, `UserDeletedEvent`) no use case via `ApplicationEventPublisher`
+- [x] **T2.7** — Testes unitários dos use cases (22 casos, MockK)
+- [x] **T2.8** — Testes de integração do controller (15 casos, MockMvc + Testcontainers `jdbc:tc:postgresql:16-alpine`)
+- [x] **T2.9** — Coleção Postman (6 requests + test scripts), environment local e atualização de documentação (`DEVELOPMENT_LOG.md`, `README.md`)
 
 ### Fase 3 — Domínio de E-mail + Retry
 
@@ -104,7 +105,8 @@ Listener de eventos, persistência de `EmailRequest`, máquina de status, job de
 | **T2.5** | `adapter/in/web/UserController.kt`, `dto/CreateUserRequest.kt`, `dto/UserResponse.kt` |
 | **T2.6** | `domain/event/UserCreatedEvent.kt`, `UserDeactivatedEvent.kt`, `UserDeletedEvent.kt`; alteração nos use cases de T2.3 |
 | **T2.7** | `src/test/kotlin/.../application/usecase/*UseCaseTest.kt` |
-| **T2.8** | `src/test/kotlin/.../adapter/in/web/UserControllerIntegrationTest.kt` |
+| **T2.8** | `src/test/kotlin/.../adapter/in/web/UserControllerIntegrationTest.kt`, `src/test/resources/application-test.yml`, `build.gradle.kts` |
+| **T2.9** | `docs/postman/email-notification-backend.postman_collection.json`, `docs/postman/email-notification-backend.postman_environment.json`, `docs/DEVELOPMENT_LOG.md`, `README.md` |
 | **T3.1** | `domain/model/EmailRequest.kt`, `domain/model/EmailStatus.kt`, `domain/model/RetryControl.kt` |
 | **T3.2** | `domain/port/EmailRequestRepository.kt`, `domain/port/RetryControlRepository.kt`, `domain/port/EmailSender.kt`, `domain/port/TemplateRenderer.kt` |
 | **T3.3** | `application/usecase/SendEmailUseCase.kt`, `ProcessRetryUseCase.kt` |
@@ -125,10 +127,11 @@ Listener de eventos, persistência de `EmailRequest`, máquina de status, job de
 | **T1.1–T1.5** | `docker-compose up` sobe app + postgres; app inicia sem erros |
 | **T1.6** | Flyway aplica migration; tabelas existem no banco |
 | **T1.7** | `GET /actuator/health` retorna `200 { "status": "UP" }` |
-| **T2.1–T2.5** | CRUD completo via REST: POST cria user, GET lista/busca, PATCH desativa, DELETE remove (soft/hard) |
+| **T2.1–T2.5** | CRUD completo via REST: POST cria user, GET lista/busca, PATCH desativa, DELETE remove (soft-delete) |
 | **T2.6** | Ao criar/desativar/deletar user, evento é publicado (verificável via log ou teste) |
-| **T2.7** | Testes unitários passam; cobertura dos use cases ≥ 90% |
-| **T2.8** | Testes de integração do controller passam com banco real (Testcontainers) |
+| **T2.7** | 22 testes unitários passando; cobertura dos use cases ≥ 90% ✅ |
+| **T2.8** | 15 testes de integração passando com Testcontainers (`jdbc:tc:postgresql:16-alpine`); self-contained, sem PostgreSQL local ✅ |
+| **T2.9** | Coleção Postman importável com 6 requests; documentação atualizada ✅ |
 | **T3.1–T3.6** | `email_request` é persistido com status `PENDING` ao receber evento |
 | **T3.7** | Listener consome evento e invoca `SendEmailUseCase`; stub loga o envio; status muda para `SENT` |
 | **T3.8** | Job de retry reprocessa registros `RETRYING`; após max tentativas, status muda para `FAILED` |
@@ -141,11 +144,13 @@ Listener de eventos, persistência de `EmailRequest`, máquina de status, job de
 | Camada | Tipo | Ferramenta | Escopo |
 |--------|------|------------|--------|
 | `domain` + `application` | **Unitário** | JUnit 5 + MockK | Use cases isolados com mocks das portas |
-| `adapter.in.web` | **Integração** | MockMvc ou WebTestClient + PostgreSQL local (`application-test.yml`) | Controllers com banco real usando o profile `test` |
-| `adapter.out.persistence` | **Integração** | `@DataJpaTest` + PostgreSQL local (`application-test.yml`) | Repositórios JPA com banco real usando o profile `test` |
-| **Fluxo completo** | **E2E (in-process)** | `@SpringBootTest` + PostgreSQL local (`application-test.yml`) | User criado → evento → `email_request` persistido com status correto |
+| `adapter.in.web` | **Integração** | MockMvc + Testcontainers (`jdbc:tc:postgresql:16-alpine`) | Controllers com banco real; self-contained (sem PostgreSQL local); profile `test` via `application-test.yml` |
+| `adapter.out.persistence` | **Integração** | `@DataJpaTest` + Testcontainers | Repositórios JPA com banco real usando o profile `test` |
+| **Fluxo completo** | **E2E (in-process)** | `@SpringBootTest` + Testcontainers | User criado → evento → `email_request` persistido com status correto |
 
-> **Convenção**: testes unitários no mesmo pacote da classe; testes de integração junto aos adapters (ex.: `com.emailnotification.adapter.in.web`), usando o profile `test` com PostgreSQL configurado em `application-test.yml`.
+> **Convenção**: testes unitários no mesmo pacote da classe; testes de integração junto aos adapters (ex.: `com.emailnotification.adapter.in.web`), usando o profile `test` com Testcontainers configurado via URL `jdbc:tc:` em `application-test.yml`.
+>
+> **Docker Engine 27+ (macOS):** o `jvmArgs("-Dapi.version=1.44")` em `build.gradle.kts` é obrigatório pois o docker-java sombreado no testcontainers-1.20.5 usa API 1.41 por padrão, incompatível com Docker Engine 27+ (API mínima 1.44).
 
 ---
 
@@ -185,5 +190,7 @@ Listener de eventos, persistência de `EmailRequest`, máquina de status, job de
 
 ## 12. Próximo Passo Recomendado
 
-> **Executar T1.1** — Inicializar o projeto Spring Boot com `build.gradle.kts` (Kotlin DSL), configurando as dependências base: Spring Web, Spring Data JPA, PostgreSQL driver, Flyway, Spring Boot Actuator, e dependências de teste (JUnit 5, MockK). Isso desbloqueia todas as tarefas subsequentes.
+> **Executar T3.1** — Criar as entidades de domínio da Fase 3: `EmailRequest`, `EmailStatus` (enum com máquina de estados `PENDING → SENT`, `PENDING → RETRYING → SENT`, `RETRYING → FAILED`) e `RetryControl`. Isso desbloqueia todas as tarefas T3.2 a T3.10.
+>
+> **Branch ativa:** `feature/phase-3-email-domain` (criada a partir de `feature/phase-2-user-events` em 27/03/2026).
 
