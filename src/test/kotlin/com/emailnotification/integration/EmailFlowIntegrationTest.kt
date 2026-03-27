@@ -10,7 +10,6 @@ import com.emailnotification.domain.model.EmailEventType
 import com.emailnotification.domain.model.EmailStatus
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -150,11 +149,9 @@ class EmailFlowIntegrationTest {
         }
 
         val snapshot = emailRequestJpaRepository.findAll().sortedBy { it.createdAt }
-        assertNotNull(snapshot, "Email requests snapshot must not be null")
         throw AssertionError(
             "Timed out waiting for $expectedCount SENT email_request row(s). " +
                 "Current count=${snapshot.size}, statuses=${snapshot.map { it.status }}"
         )
     }
 }
-
