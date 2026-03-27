@@ -34,3 +34,11 @@ management:
     health:
       show-details: never
 
+app:
+  email:
+    retry:
+      # Minutes to wait before each retry attempt (default: 5)
+      interval-minutes: 5
+      # Maximum number of retry attempts per EmailRequest (default: 3)
+      max-attempts: 3
+
